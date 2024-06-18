@@ -18,7 +18,7 @@ class FantasyBlogApplicationTests {
 
 //    @Test
     void createProject() {
-        FastAutoGenerator.create("jdbc:mysql://110.40.221.157:3306/Feeding?useUnicode=true&zeroDateTimeBehavior=convertToNull&characterEncoding=utf-8&useSSL=false",
+        FastAutoGenerator.create("jdbc:mysql://106.14.45.117:3306/fantasy-blog?useUnicode=true&zeroDateTimeBehavior=convertToNull&characterEncoding=utf-8&useSSL=false",
                         "root", "mhs-mysql4001051166")
                 .globalConfig(builder -> {
                     builder.author("Fantasy0521") // 设置作者
@@ -33,7 +33,7 @@ class FantasyBlogApplicationTests {
                             .pathInfo(Collections.singletonMap(OutputFile.mapperXml, "D:\\代码生成器\\Fantasy-CommonSpringBoot")); // 设置mapperXml生成路径
                 })
                 .strategyConfig(builder -> {
-//                    builder.addInclude("t_simple") // 设置需要生成的表名
+                    builder.addInclude("upload_file"); // 设置需要生成的表名
 //                            .addTablePrefix("t_", "c_"); // 设置过滤表前缀
                     //全部的表都生成
                     builder.likeTable(new LikeTable("%"));

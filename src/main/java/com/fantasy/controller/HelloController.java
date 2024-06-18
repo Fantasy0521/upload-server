@@ -14,26 +14,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({ "/common/user" })
+@RequestMapping({ "/common/hello" })
 @ApiSupport(author = "fantasy0521")
-@Api(tags = "用户接口")
-public class UserController {
+@Api(tags = "hello")
+public class HelloController {
 
-    @Autowired
-    private IUserService userService;
-
-    @GetMapping("/getUserById")
+    @GetMapping("/hello")
     @ApiOperation(value = "根据id查询用户",notes = "1")
-    public Result getUserById(Long id){
-        User byId = userService.getById(id);
-        return Result.ok("查询成功",byId);
+    public Result hello(){
+        return Result.ok("hello");
     }
 
-    @GetMapping("/getUserPage")
-    @ApiOperation(value = "分页查询用户列表",notes = "2")
-    public Result getUserPage(PageVo page){
-        IPage<User> byPage = userService.getUserListByPage(page);
-        return Result.ok("查询成功",byPage);
-    }
 
 }
