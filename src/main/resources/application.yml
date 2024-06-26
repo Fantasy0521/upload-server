@@ -7,7 +7,10 @@ spring:
   mvc: # 解决引入knife4j产生的问题
     pathmatch:
       matching-strategy: ant_path_matcher
-      
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 1000MB
   profiles: # 设置环境配置文件
     active: linux # 启用application-linux或windows
 
