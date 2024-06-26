@@ -202,8 +202,10 @@ public class UploadController {
     @ApiOperation(value = "list",notes = "3")
     public Result list(@RequestParam(value = "fileName",required = false) String fileName,
                        @RequestParam(value = "originFileName",required = false) String originFileName,
-                       @RequestParam(value = "sort",required = false) Integer sort){
-        List<UploadFile> list = getUploadFileList(fileName, originFileName, sort);
+                       @RequestParam(value = "sort",required = false) Integer sort,
+                       @RequestParam(value = "type",required = false) String type
+                       ){
+        List<UploadFile> list = getUploadFileList(fileName, originFileName, sort,type);
         return Result.ok(list);
     }
 
@@ -211,13 +213,14 @@ public class UploadController {
     @ApiOperation(value = "listFileNames",notes = "4")
     public Result listFileNames(@RequestParam(value = "fileName",required = false) String fileName,
                                 @RequestParam(value = "originFileName",required = false) String originFileName,
-                                @RequestParam(value = "sort",required = false) Integer sort){
-        List<UploadFile> list = getUploadFileList(fileName, originFileName, sort);
+                                @RequestParam(value = "sort",required = false) Integer sort,
+                                @RequestParam(value = "type",required = false) String type){
+        List<UploadFile> list = getUploadFileList(fileName, originFileName, sort,type);
         List<String> collect = list.stream().map(UploadFile::getFileName).collect(Collectors.toList());
         return Result.ok(collect);
     }
 
-    private List<UploadFile> getUploadFileList(@RequestParam(value = "fileName", required = false) String fileName, @RequestParam(value = "originFileName", required = false) String originFileName, @RequestParam(value = "sort", required = false) Integer sort) {
+    private List<UploadFile> getUploadFileList(String fileName,String originFileName,Integer sort,String type) {
         LambdaQueryWrapper<UploadFile> queryWrapper = new LambdaQueryWrapper<>();
         if (fileName != null) {
             queryWrapper.eq(UploadFile::getFileName,fileName);
@@ -231,6 +234,9 @@ public class UploadController {
             }else {
                 queryWrapper.orderByAsc(UploadFile::getCreateTime);
             }
+        }
+        if (type != null) {
+            queryWrapper.eq(UploadFile::getType,type);
         }
         return uploadFileService.list(queryWrapper);
     }
