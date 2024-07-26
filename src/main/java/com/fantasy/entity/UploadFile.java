@@ -41,4 +41,10 @@ public class UploadFile implements Serializable {
 
     private Date createTime;
 
+    private Long createUser;
+
+    private String dir;
+
+
+
 }

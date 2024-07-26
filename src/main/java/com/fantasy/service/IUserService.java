@@ -16,4 +16,10 @@ import com.fantasy.model.vo.PageVo;
 public interface IUserService extends IService<User> {
 
     IPage<User> getUserListByPage(PageVo page);
+
+    User login(User user);
+    User register(User user);
+
+    User getCurrentUser();
+
 }

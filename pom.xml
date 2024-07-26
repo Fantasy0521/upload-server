@@ -87,7 +87,12 @@
             <version>3.0.2</version>
         </dependency>
 
-
+        <!-- Spring Session -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-core</artifactId>
+            <version>2.7.2</version>
+        </dependency>
 
     </dependencies>
 
