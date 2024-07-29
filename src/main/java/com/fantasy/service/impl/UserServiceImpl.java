@@ -29,9 +29,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     @Autowired
     private UserMapper userMapper;
 
-    @Autowired
-    private HttpSession session;
-
     @Override
     public IPage<User> getUserListByPage(PageVo page) {
         return userMapper.selectUserListByPage(page.convertPage());
@@ -39,8 +36,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public User getCurrentUser() {
-        Object currentUser = session.getAttribute("currentUser");
-        return (User) currentUser;
+        User currentUser = StorageUserUtil.getCurrentUser();
+        if (currentUser == null) {
+            throw new RuntimeException("请先登录");
+        }
+        return currentUser;
     }
 
     @Override
@@ -52,10 +52,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (one == null) {
             throw new RuntimeException("手机号或密码错误");
         }
-        session.setAttribute("currentUser",one);
-        session.setMaxInactiveInterval(24 * 60 * 60);
         one.setPassword("bf4a54197b23998d595c4ac6fb6ebaec");
-        StorageUserUtil.setCurrentUser(one);
+        StorageUserUtil.addUserAndSetCurrentUser(one);
         return one;
     }
 

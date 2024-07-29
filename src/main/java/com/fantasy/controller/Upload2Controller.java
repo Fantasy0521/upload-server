@@ -12,6 +12,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -47,9 +48,9 @@ public class Upload2Controller {
     @PostMapping("upload")
     @ApiOperation(value = "upload", notes = "1")
     public Result upload(MultipartFile file) {
-        Object currentUser = session.getAttribute("currentUser");
+        User currentUser = StorageUserUtil.getCurrentUser();
         if (currentUser == null) {
-            return Result.ok("上传失败", "请先登录");
+            return Result.error("上传失败,请先登录");
         }
         //获取文件原始名,使用原始名可能出现覆盖问题
         String originalFilename = file.getOriginalFilename();
@@ -59,7 +60,7 @@ public class Upload2Controller {
         //使用UUID重新生成文件名
         String fileName = UUID.randomUUID().toString() + originalFilename;
         //这里上传目录加上用户名
-        User user = (User) currentUser;
+        User user = currentUser;
         String basePath = url + user.getName() + File.separator;
 
         //创建一个目录对象
@@ -143,9 +144,9 @@ public class Upload2Controller {
     @ApiOperation(value = "download", notes = "2")
     public void download(String name, HttpServletResponse response) {
         try {
-            User currentUser = (User) session.getAttribute("currentUser");
+            User currentUser = StorageUserUtil.getCurrentUser();
             if (currentUser == null) {
-                return;
+                throw new RuntimeException("请先登录");
             }
             String basePath = url + currentUser.getName() + File.separator;
 
@@ -223,13 +224,9 @@ public class Upload2Controller {
             queryWrapper.eq(UploadFile::getType, type);
         }
         //只显示当前用户的文件
-        User currentUser = (User) session.getAttribute("currentUser");
+        User currentUser = StorageUserUtil.getCurrentUser();
         if (currentUser == null) {
-            currentUser = StorageUserUtil.getCurrentUser();
-            Map<Long, User> userMap = StorageUserUtil.userMap;
-            if (currentUser == null) {
-                return null;
-            }
+            throw new RuntimeException("请先登录");
         }
         queryWrapper.eq(UploadFile::getCreateUser, currentUser.getId());
         return uploadFileService.list(queryWrapper);
@@ -237,9 +234,10 @@ public class Upload2Controller {
 
     @DeleteMapping("/deleteFile")
     @ApiOperation(value = "deleteFile", notes = "5")
+    @Transactional
     public Result deleteFile(@RequestParam("fileName") String fileName, @RequestParam("code") String code) {
         try {
-            User currentUser = (User) session.getAttribute("currentUser");
+            User currentUser = StorageUserUtil.getCurrentUser();
             if (currentUser == null) {
                 return Result.error("请先登录");
             }
@@ -251,14 +249,14 @@ public class Upload2Controller {
             if (!currentUser.getId().equals(uploadFile.getCreateUser())) {
                 return Result.error("您没有权限删除别人的文件!");
             }
-            uploadFileService.removeById(uploadFile.getId());
             // 构建文件路径，这里假设文件位于项目的根目录或某个特定目录下
-            String filePath = url + fileName; // 请替换为实际文件路径
+            String filePath = url + currentUser.getName()  + File.separator +  fileName; // 请替换为实际文件路径
             File file = new File(filePath);
 
             if (file.exists() && file.isFile()) {
                 boolean deleted = file.delete();
                 if (deleted) {
+                    uploadFileService.removeById(uploadFile.getId());
                     return Result.ok("删除文件 " + fileName + " 成功");
                 } else {
                     return Result.error("删除文件 " + fileName + " 失败");
