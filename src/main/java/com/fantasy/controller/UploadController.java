@@ -161,13 +161,18 @@ public class UploadController {
      */
     @GetMapping("/download")
     @ApiOperation(value = "download",notes = "2")
-    public void download(String name, HttpServletResponse response) {
+    public void download(String name,@RequestParam(required = false) String dir,HttpServletResponse response) {
         try {
 
             String basePath = url;
 
             //输入流,通过输入流读取文件内容
-            FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));
+            FileInputStream fileInputStream;
+            if (dir == null) {
+                fileInputStream = new FileInputStream(new File(basePath + name));
+            }else {
+                fileInputStream = new FileInputStream(new File(basePath + dir + File.separator + name));
+            }
 
             //输出流,通过输出流将文件同时写会浏览器,在浏览器展示图片
             ServletOutputStream outputStream = response.getOutputStream();
@@ -178,7 +183,7 @@ public class UploadController {
             //查询原文件名
             UploadFile uploadFile = uploadFileService.getOne(new LambdaQueryWrapper<UploadFile>().eq(UploadFile::getFileName, name));
             if (uploadFile == null) {
-                return;
+                throw new RuntimeException("查询不到该文件");
             }
             //浏览器直接预览不下载
             response.setHeader("Content-Type", "image/jpeg");

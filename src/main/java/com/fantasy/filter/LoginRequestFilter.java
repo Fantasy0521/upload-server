@@ -31,7 +31,7 @@ public class LoginRequestFilter extends RequestContextFilter {
 
         String requestURI = request.getRequestURI();
         //需要放行的接口
-        if (requestURI.contains("login") || requestURI.contains("register") || requestURI.contains("download") || requestURI.contains("upload/upload")) {
+        if (requestURI.contains("login") || requestURI.contains("register") || requestURI.contains("download") || requestURI.contains("upload/upload") || requestURI.contains("doc")) {
             filterChain.doFilter(request, response);
             return; //这里如果不return,那么SecurityInterceptor响应回来会继续往下执行
         }

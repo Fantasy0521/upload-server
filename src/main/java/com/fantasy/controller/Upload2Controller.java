@@ -77,7 +77,7 @@ public class Upload2Controller {
             UploadFile uploadFile = new UploadFile();
             uploadFile.setFileName(fileName);
             uploadFile.setOriginFileName(originalFilename);
-            uploadFile.setDownloadUrl(download_url + fileName);
+            uploadFile.setDownloadUrl(download_url + fileName + "&dir=" + user.getName());
             uploadFile.setSuffix(suffix);
             uploadFile.setType(getFileType(suffix));
             uploadFile.setCreateTime(new Date());
