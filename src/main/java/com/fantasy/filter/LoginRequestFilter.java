@@ -23,6 +23,10 @@ public class LoginRequestFilter extends RequestContextFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+//        filterChain.doFilter(request,response);
+//        if (true){
+//            return;
+//        }
         //跨域请求首先会发送一个OPTIONS确认请求，没问题才会发送真实请求
         if ("OPTIONS".equals(request.getMethod())) {
             filterChain.doFilter(request, response);
@@ -31,7 +35,11 @@ public class LoginRequestFilter extends RequestContextFilter {
 
         String requestURI = request.getRequestURI();
         //需要放行的接口
-        if (requestURI.contains("login") || requestURI.contains("register") || requestURI.contains("download") || requestURI.contains("upload/upload") || requestURI.contains("doc")) {
+        if (requestURI.contains("login") || requestURI.contains("register") || requestURI.contains("download")
+                || requestURI.contains("upload/upload") || requestURI.contains("doc")
+                || requestURI.contains("index") || requestURI.contains("static")
+                || requestURI.contains("swagger") || requestURI.contains("webjars")
+                || requestURI.contains("favicon")) {
             filterChain.doFilter(request, response);
             return; //这里如果不return,那么SecurityInterceptor响应回来会继续往下执行
         }

@@ -3,7 +3,6 @@ package com.fantasy.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fantasy.entity.UploadFile;
 import com.fantasy.entity.User;
-import com.fantasy.exception.UserThread;
 import com.fantasy.model.Result.Result;
 import com.fantasy.service.IUploadFileService;
 import com.fantasy.util.StorageUserUtil;
@@ -32,8 +31,8 @@ import java.util.stream.Collectors;
 @Api(tags = "upload1")
 public class Upload2Controller {
 
-    @Value("${linuxImg.url}")
-    private String url;
+    @Value("${download.path}")
+    private String path;
 
     @Value("${download.url}")
     private String download_url;
@@ -61,7 +60,7 @@ public class Upload2Controller {
         String fileName = UUID.randomUUID().toString() + originalFilename;
         //这里上传目录加上用户名
         User user = currentUser;
-        String basePath = url + user.getName() + File.separator;
+        String basePath = path + user.getName() + File.separator;
 
         //创建一个目录对象
         File dir = new File(basePath);
@@ -148,7 +147,7 @@ public class Upload2Controller {
             if (currentUser == null) {
                 throw new RuntimeException("请先登录");
             }
-            String basePath = url + currentUser.getName() + File.separator;
+            String basePath = path + currentUser.getName() + File.separator;
 
             //输入流,通过输入流读取文件内容
             FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));
@@ -250,7 +249,7 @@ public class Upload2Controller {
                 return Result.error("您没有权限删除别人的文件!");
             }
             // 构建文件路径，这里假设文件位于项目的根目录或某个特定目录下
-            String filePath = url + currentUser.getName()  + File.separator +  fileName; // 请替换为实际文件路径
+            String filePath = path + currentUser.getName()  + File.separator +  fileName; // 请替换为实际文件路径
             File file = new File(filePath);
 
             if (file.exists() && file.isFile()) {
