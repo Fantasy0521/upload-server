@@ -1,0 +1,271 @@
+package com.fantasy.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fantasy.entity.UploadFile;
+import com.fantasy.entity.User;
+import com.fantasy.model.Result.Result;
+import com.fantasy.service.IUploadFileService;
+import com.fantasy.util.StorageUserUtil;
+import com.github.xiaoymin.knife4j.annotations.ApiSupport;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping({"/common/upload1"})
+@ApiSupport(author = "fantasy0521")
+@Api(tags = "upload1")
+public class Upload2Controller {
+
+    @Value("${download.path}")
+    private String path;
+
+    @Value("${download.url}")
+    private String download_url;
+
+    @Autowired
+    private IUploadFileService uploadFileService;
+
+    @Autowired
+    private HttpSession session;
+
+    //文件上传 上传图片
+    @PostMapping("upload")
+    @ApiOperation(value = "upload", notes = "1")
+    public Result upload(MultipartFile file) {
+        User currentUser = StorageUserUtil.getCurrentUser();
+        if (currentUser == null) {
+            return Result.error("上传失败,请先登录");
+        }
+        //获取文件原始名,使用原始名可能出现覆盖问题
+        String originalFilename = file.getOriginalFilename();
+        //获取后缀
+        String suffix = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        //这里采取随机生成一个文件名
+        //使用UUID重新生成文件名
+        String fileName = UUID.randomUUID().toString() + originalFilename;
+        //这里上传目录加上用户名
+        User user = currentUser;
+        String basePath = path + user.getName() + File.separator;
+
+        //创建一个目录对象
+        File dir = new File(basePath);
+        //判断当前目录是否存在
+        if (!dir.exists()) {
+            //目录不存在,创建
+            dir.mkdir();
+        }
+
+        try {
+            file.transferTo(new File(basePath + fileName));
+            //存入upload_file表
+            UploadFile uploadFile = new UploadFile();
+            uploadFile.setFileName(fileName);
+            uploadFile.setOriginFileName(originalFilename);
+            uploadFile.setDownloadUrl(download_url + fileName + "&dir=" + user.getName());
+            uploadFile.setSuffix(suffix);
+            uploadFile.setType(getFileType(suffix));
+            uploadFile.setCreateTime(new Date());
+            uploadFile.setCreateUser(user.getId());
+            uploadFile.setDir(user.getName());
+            uploadFileService.save(uploadFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Result.error("上传失败" + e.getMessage());
+        }
+        return Result.ok("上传成功", fileName);
+    }
+
+    //文件上传 上传图片
+    @PostMapping("uploads")
+    @ApiOperation(value = "uploads", notes = "1")
+    public Result uploads(MultipartFile[] files) {
+        List<String> fileNames = new ArrayList<>();
+        for (MultipartFile file : files) {
+            upload(file);
+        }
+        return Result.ok("上传成功", fileNames);
+    }
+
+    private String getFileType(String suffix) {
+        switch (suffix) {
+            case "jpg":
+            case "jpeg":
+            case "png":
+            case "gif":
+            case "jfif":
+                return "图片";
+            case "mp4":
+            case "avi":
+            case "mkv":
+            case "flv":
+                return "视频";
+            case "doc":
+            case "docx":
+            case "pdf":
+            case "txt":
+                return "文档";
+            case "xlsx":
+            case "xls":
+                return "Excel";
+            case "ppt":
+            case "pptx":
+                return "PPT";
+            case "zip":
+            case "rar":
+                return "压缩包";
+            default:
+                return "其他";
+        }
+    }
+
+    /**
+     * 文件下载
+     *
+     * @param name
+     * @param response
+     */
+    @GetMapping("/download")
+    @ApiOperation(value = "download", notes = "2")
+    public void download(String name, HttpServletResponse response) {
+        try {
+            User currentUser = StorageUserUtil.getCurrentUser();
+            if (currentUser == null) {
+                throw new RuntimeException("请先登录");
+            }
+            String basePath = path + currentUser.getName() + File.separator;
+
+            //输入流,通过输入流读取文件内容
+            FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));
+
+            //输出流,通过输出流将文件同时写会浏览器,在浏览器展示图片
+            ServletOutputStream outputStream = response.getOutputStream();
+
+            //浏览器下载
+//            response.setContentType("images/jepg");
+
+            //查询原文件名
+            UploadFile uploadFile = uploadFileService.getOne(new LambdaQueryWrapper<UploadFile>().eq(UploadFile::getFileName, name));
+            if (uploadFile == null) {
+                return;
+            }
+            //浏览器直接预览不下载
+            response.setHeader("Content-Type", "image/jpeg");
+            response.setHeader("Content-Disposition", "inline; filename=" + URLEncoder.encode(uploadFile.getOriginFileName(), "UTF-8"));
+
+            int len = 0;
+            byte[] bytes = new byte[1024];
+            while ((len = fileInputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, len);
+                outputStream.flush();
+            }
+            outputStream.close();
+            fileInputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    @GetMapping("/list")
+    @ApiOperation(value = "list", notes = "3")
+    public Result list(@RequestParam(value = "fileName", required = false) String fileName,
+                       @RequestParam(value = "originFileName", required = false) String originFileName,
+                       @RequestParam(value = "sort", required = false) Integer sort,
+                       @RequestParam(value = "type", required = false) String type
+    ) {
+        List<UploadFile> list = getUploadFileList(fileName, originFileName, sort, type);
+        return Result.ok(list);
+    }
+
+    @GetMapping("/listFileNames")
+    @ApiOperation(value = "listFileNames", notes = "4")
+    public Result listFileNames(@RequestParam(value = "fileName", required = false) String fileName,
+                                @RequestParam(value = "originFileName", required = false) String originFileName,
+                                @RequestParam(value = "sort", required = false) Integer sort,
+                                @RequestParam(value = "type", required = false) String type) {
+        List<UploadFile> list = getUploadFileList(fileName, originFileName, sort, type);
+        List<String> collect = list.stream().map(UploadFile::getFileName).collect(Collectors.toList());
+        return Result.ok(collect);
+    }
+
+    private List<UploadFile> getUploadFileList(String fileName, String originFileName, Integer sort, String type) {
+        LambdaQueryWrapper<UploadFile> queryWrapper = new LambdaQueryWrapper<>();
+        if (fileName != null) {
+            queryWrapper.eq(UploadFile::getFileName, fileName);
+        }
+        if (originFileName != null) {
+            queryWrapper.eq(UploadFile::getOriginFileName, originFileName);
+        }
+        if (sort != null) {
+            if (sort == 1) {
+                queryWrapper.orderByDesc(UploadFile::getCreateTime);
+            } else {
+                queryWrapper.orderByAsc(UploadFile::getCreateTime);
+            }
+        }
+        if (type != null) {
+            queryWrapper.eq(UploadFile::getType, type);
+        }
+        //只显示当前用户的文件
+        User currentUser = StorageUserUtil.getCurrentUser();
+        if (currentUser == null) {
+            throw new RuntimeException("请先登录");
+        }
+        queryWrapper.eq(UploadFile::getCreateUser, currentUser.getId());
+        return uploadFileService.list(queryWrapper);
+    }
+
+    @DeleteMapping("/deleteFile")
+    @ApiOperation(value = "deleteFile", notes = "5")
+    @Transactional
+    public Result deleteFile(@RequestParam("fileName") String fileName, @RequestParam("code") String code) {
+        try {
+            User currentUser = StorageUserUtil.getCurrentUser();
+            if (currentUser == null) {
+                return Result.error("请先登录");
+            }
+            UploadFile uploadFile = uploadFileService.getOne(new LambdaQueryWrapper<UploadFile>().eq(UploadFile::getFileName, fileName));
+            if (uploadFile == null) {
+                return Result.error("文件 " + fileName + " 不存在");
+            }
+            //验证code
+            if (!currentUser.getId().equals(uploadFile.getCreateUser())) {
+                return Result.error("您没有权限删除别人的文件!");
+            }
+            // 构建文件路径，这里假设文件位于项目的根目录或某个特定目录下
+            String filePath = path + currentUser.getName()  + File.separator +  fileName; // 请替换为实际文件路径
+            File file = new File(filePath);
+
+            if (file.exists() && file.isFile()) {
+                boolean deleted = file.delete();
+                if (deleted) {
+                    uploadFileService.removeById(uploadFile.getId());
+                    return Result.ok("删除文件 " + fileName + " 成功");
+                } else {
+                    return Result.error("删除文件 " + fileName + " 失败");
+                }
+            } else {
+                return Result.error("文件 " + fileName + " 不存在");
+            }
+        } catch (Exception e) {
+            return Result.error("删除文件过程中发生错误：" + e.getMessage());
+        }
+    }
+
+}
