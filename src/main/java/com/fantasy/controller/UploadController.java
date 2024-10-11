@@ -1,7 +1,6 @@
 package com.fantasy.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fantasy.entity.UploadFile;
 import com.fantasy.model.Result.Result;
 import com.fantasy.service.IUploadFileService;
@@ -31,8 +30,8 @@ import java.util.stream.Collectors;
 @Api(tags = "upload")
 public class UploadController {
 
-    @Value("${linuxImg.url}")
-    private String url;
+    @Value("${download.path}")
+    private String path;
 
     @Value("${download.url}")
     private String download_url;
@@ -52,7 +51,7 @@ public class UploadController {
         //使用UUID重新生成文件名
         String fileName = UUID.randomUUID().toString() + originalFilename;
 
-        String basePath = url;
+        String basePath = path;
 
         //创建一个目录对象
         File dir = new File(basePath);
@@ -92,7 +91,7 @@ public class UploadController {
             //获取后缀
             String suffix = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
             String fileName = UUID.randomUUID().toString() + originalFilename;
-            String basePath = url;
+            String basePath = path;
             //创建一个目录对象
             File dir = new File(basePath);
             //判断当前目录是否存在
@@ -164,7 +163,7 @@ public class UploadController {
     public void download(String name,@RequestParam(required = false) String dir,HttpServletResponse response) {
         try {
 
-            String basePath = url;
+            String basePath = path;
 
             //输入流,通过输入流读取文件内容
             FileInputStream fileInputStream;
@@ -257,7 +256,7 @@ public class UploadController {
             }
             uploadFileService.removeById(uploadFile.getId());
             // 构建文件路径，这里假设文件位于项目的根目录或某个特定目录下
-            String filePath = url + fileName; // 请替换为实际文件路径
+            String filePath = path + fileName; // 请替换为实际文件路径
             File file = new File(filePath);
 
             if (file.exists() && file.isFile()) {
