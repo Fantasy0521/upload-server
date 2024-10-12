@@ -4,7 +4,7 @@
 文件上传服务器
 提供基础的文件下载服务，开箱即用
 内置在线相册，部署上线后请使用手机浏览器打开 http://ip:8055/index.html
-![](http://106.14.45.117:8055/common/upload1/download?name=79603a09-59ea-4d83-9e8b-b346f52a5f121728716461238_Screenshot_20241012_150039.jpg)
+<img src="http://106.14.45.117:8055/common/upload1/download?name=79603a09-59ea-4d83-9e8b-b346f52a5f121728716461238_Screenshot_20241012_150039.jpg" style="zoom:30%;" />
 
 #### 软件架构
 SpringBoot
