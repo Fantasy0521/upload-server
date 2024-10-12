@@ -3,6 +3,8 @@ package com.fantasy.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fantasy.entity.UploadFile;
 import com.fantasy.entity.User;
+import com.fantasy.exception.BizException;
+import com.fantasy.exception.BizRuntimeException;
 import com.fantasy.model.Result.Result;
 import com.fantasy.service.IUploadFileService;
 import com.fantasy.util.StorageUserUtil;
@@ -22,6 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -143,43 +146,66 @@ public class Upload2Controller {
     @ApiOperation(value = "download", notes = "2")
     public void download(String name, HttpServletResponse response) {
         try {
+            // 获取当前登录用户
             User currentUser = StorageUserUtil.getCurrentUser();
             if (currentUser == null) {
                 throw new RuntimeException("请先登录");
             }
+
+            // 设置基础路径，包含用户的名称
             String basePath = path + currentUser.getName() + File.separator;
 
-            //输入流,通过输入流读取文件内容
-            FileInputStream fileInputStream = new FileInputStream(new File(basePath + name));
+            // 创建文件对象
+            File file = new File(basePath + name);
 
-            //输出流,通过输出流将文件同时写会浏览器,在浏览器展示图片
+            // 检查文件是否存在
+            if (!file.exists()) {
+                throw new RuntimeException("文件不存在");
+            }
+
+            // 输入流, 通过输入流读取文件内容
+            FileInputStream fileInputStream = new FileInputStream(file);
+
+            // 输出流, 通过输出流将文件写回到浏览器
             ServletOutputStream outputStream = response.getOutputStream();
 
-            //浏览器下载
-//            response.setContentType("images/jepg");
+            // 获取文件的MIME类型
+            String contentType = Files.probeContentType(file.toPath());
+            if (contentType == null) {
+                // 如果无法确定MIME类型，则默认为application/octet-stream
+                contentType = "application/octet-stream";
+            }
+            response.setContentType(contentType);
 
-            //查询原文件名
+            // 查询原文件名
             UploadFile uploadFile = uploadFileService.getOne(new LambdaQueryWrapper<UploadFile>().eq(UploadFile::getFileName, name));
             if (uploadFile == null) {
-                return;
+                throw new RuntimeException("查询不到该文件");
             }
-            //浏览器直接预览不下载
-            response.setHeader("Content-Type", "image/jpeg");
-            response.setHeader("Content-Disposition", "inline; filename=" + URLEncoder.encode(uploadFile.getOriginFileName(), "UTF-8"));
 
+            // 根据文件类型决定是预览还是下载
+            boolean isPreviewable = contentType.startsWith("image/") || contentType.startsWith("video/");
+            String contentDisposition = isPreviewable ? "inline" : "attachment";
+
+            // 设置Content-Disposition头
+            response.setHeader("Content-Disposition", contentDisposition + "; filename=\"" + URLEncoder.encode(uploadFile.getOriginFileName(), "UTF-8") + "\"");
+
+            // 将文件内容写入到输出流中
             int len = 0;
             byte[] bytes = new byte[1024];
             while ((len = fileInputStream.read(bytes)) != -1) {
                 outputStream.write(bytes, 0, len);
                 outputStream.flush();
             }
+
+            // 关闭流
             outputStream.close();
             fileInputStream.close();
+
         } catch (Exception e) {
             e.printStackTrace();
+            throw new BizRuntimeException("文件服务器异常");
         }
-
-
     }
 
     @GetMapping("/list")

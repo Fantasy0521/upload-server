@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -159,48 +160,69 @@ public class UploadController {
      * @param response
      */
     @GetMapping("/download")
-    @ApiOperation(value = "download",notes = "2")
-    public void download(String name,@RequestParam(required = false) String dir,HttpServletResponse response) {
+    @ApiOperation(value = "download", notes = "2")
+    public void download(String name, @RequestParam(required = false) String dir, HttpServletResponse response) {
         try {
-
+            // 设置基础路径
             String basePath = path;
 
-            //输入流,通过输入流读取文件内容
-            FileInputStream fileInputStream;
+            // 创建文件对象
+            File file;
             if (dir == null) {
-                fileInputStream = new FileInputStream(new File(basePath + name));
-            }else {
-                fileInputStream = new FileInputStream(new File(basePath + dir + File.separator + name));
+                file = new File(basePath + name);
+            } else {
+                file = new File(basePath + dir + File.separator + name);
             }
 
-            //输出流,通过输出流将文件同时写会浏览器,在浏览器展示图片
+            // 检查文件是否存在
+            if (!file.exists()) {
+                throw new RuntimeException("文件不存在");
+            }
+
+            // 输入流, 通过输入流读取文件内容
+            FileInputStream fileInputStream = new FileInputStream(file);
+
+            // 输出流, 通过输出流将文件写回到浏览器
             ServletOutputStream outputStream = response.getOutputStream();
 
-            //浏览器下载
-//            response.setContentType("images/jepg");
+            // 获取文件的MIME类型
+            String contentType = Files.probeContentType(file.toPath());
+            if (contentType == null) {
+                // 如果无法确定MIME类型，则默认为application/octet-stream
+                contentType = "application/octet-stream";
+            }
+            response.setContentType(contentType);
 
-            //查询原文件名
+            // 查询原文件名
             UploadFile uploadFile = uploadFileService.getOne(new LambdaQueryWrapper<UploadFile>().eq(UploadFile::getFileName, name));
             if (uploadFile == null) {
                 throw new RuntimeException("查询不到该文件");
             }
-            //浏览器直接预览不下载
-            response.setHeader("Content-Type", "image/jpeg");
-            response.setHeader("Content-Disposition", "inline; filename=" +  URLEncoder.encode(uploadFile.getOriginFileName(), "UTF-8"));
 
+            // 如果是图片或者视频则预览而不是下载
+            // 根据文件类型决定是预览还是下载
+            boolean isPreviewable = contentType.startsWith("image/") || contentType.startsWith("video/");
+            String contentDisposition = isPreviewable ? "inline" : "attachment";
+
+            // 设置Content-Disposition头
+            response.setHeader("Content-Disposition", contentDisposition + "; filename=\"" + URLEncoder.encode(uploadFile.getOriginFileName(), "UTF-8") + "\"");
+
+            // 将文件内容写入到输出流中
             int len = 0;
             byte[] bytes = new byte[1024];
             while ((len = fileInputStream.read(bytes)) != -1) {
                 outputStream.write(bytes, 0, len);
                 outputStream.flush();
             }
+
+            // 关闭流
             outputStream.close();
             fileInputStream.close();
+
         } catch (Exception e) {
             e.printStackTrace();
+            // 这里可以处理异常，比如返回一个错误页面或JSON
         }
-
-
     }
 
     @GetMapping("/list")
@@ -209,7 +231,7 @@ public class UploadController {
                        @RequestParam(value = "originFileName",required = false) String originFileName,
                        @RequestParam(value = "sort",required = false) Integer sort,
                        @RequestParam(value = "type",required = false) String type
-                       ){
+    ){
         List<UploadFile> list = getUploadFileList(fileName, originFileName, sort,type);
         return Result.ok(list);
     }
