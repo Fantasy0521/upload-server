@@ -18,7 +18,7 @@ class FantasyBlogApplicationTests {
 
 //    @Test
     void createProject() {
-        FastAutoGenerator.create("jdbc:mysql://106.14.45.117:3306/fantasy-blog?useUnicode=true&zeroDateTimeBehavior=convertToNull&characterEncoding=utf-8&useSSL=false",
+        FastAutoGenerator.create("jdbc:mysql://101.34.137.166:3306/fantasy-blog?useUnicode=true&zeroDateTimeBehavior=convertToNull&characterEncoding=utf-8&useSSL=false",
                         "root", "mhs-mysql4001051166")
                 .globalConfig(builder -> {
                     builder.author("Fantasy0521") // 设置作者
